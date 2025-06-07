@@ -19,9 +19,10 @@ public:
     HybridUIApp(HINSTANCE hInstance);
     ~HybridUIApp() override;
 
-    bool Initialize() override;;
+    bool Initialize() override;
 
     int Run() override;
+
 
 protected:
     void Update(const GameTimer& gt) override;
@@ -85,12 +86,13 @@ protected:
 
     bool IsStop = false;
 
-   
+    const int StatisticStepSecondsCount = 120;
 
     std::shared_ptr<GRootSignature> ssaoPrimeRootSignature;
     GTexture secondDeviceUITexture;
     GDescriptor secondDeviceUIBackBufferRTV;
     std::shared_ptr<GCrossAdapterResource> crossAdapterUITexture;
+    std::shared_ptr<GCrossAdapterResource> crossAdapterBackBufferTexture;
     GTexture primeDeviceUITexture;
     GDescriptor primeUIBackBufferSRV;
 

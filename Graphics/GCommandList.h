@@ -180,6 +180,11 @@ namespace PEPEngine::Graphics
         void ResolveSubresource(const GResource& dstRes, const GResource& srcRes, uint32_t dstSubresource = 0,
                                 uint32_t srcSubresource = 0);
 
+        void CopyResourceAsync(
+            const GResource& dstRes,
+            const GResource& srcRes,
+            const std::shared_ptr<GCommandQueue>& copyQueue);
+
         void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t startVertex = 0,
                   uint32_t startInstance = 0) const;
         void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t startIndex = 0,
@@ -195,5 +200,7 @@ namespace PEPEngine::Graphics
         bool Close(const std::shared_ptr<GCommandList>& pendingCommandList) const;
 
         void Close() const;
+
+
     };
 }

@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="FrameResource.cpp" />
+    <ClCompile Include="HybridUIApp.cpp" />
+    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="UILayer.cpp" />
+    <ClCompile Include="UIPictruresLoader.cpp" />
+    <ClCompile Include="BlurFilter.cpp" />
+    <ClCompile Include="..\Submodule\imgui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\Submodule\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\Submodule\imgui\imgui.cpp" />
+    <ClCompile Include="..\Submodule\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\Submodule\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Submodule\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\Submodule\imgui\imgui_widgets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FrameResource.h" />
+    <ClInclude Include="HybridUIApp.h" />
+    <ClInclude Include="UILayer.h" />
+    <ClInclude Include="UIPictruresLoader.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="Data.h" />
+    <ClInclude Include="BlurFilter.h" />
+    <ClInclude Include="..\Submodule\imgui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\Submodule\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\Submodule\imgui\imconfig.h" />
+    <ClInclude Include="..\Submodule\imgui\imgui.h" />
+    <ClInclude Include="..\Submodule\imgui\imgui_internal.h" />
+    <ClInclude Include="..\Submodule\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\Submodule\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\Submodule\imgui\imstb_truetype.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{16404250-12a3-4ac3-a88c-de42e187347d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UI Pictures">
+      <UniqueIdentifier>{ca848515-51c0-4425-a05b-2d68341f244a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fonts">
+      <UniqueIdentifier>{3b89c2a6-f6c2-4bff-bba9-e81cd3283a20}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="BlurCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="Data\Fonts\Fanti.ttf">
+      <Filter>Fonts</Filter>
+    </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Pictures\Mountains_4K.jpg">
+      <Filter>UI Pictures</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

@@ -5,7 +5,7 @@
 namespace PEPEngine::Utils
 {
     template <typename T>
-    class LockThreadQueue final
+    class LockThreadQueue
     {
     public:
         LockThreadQueue();
@@ -53,7 +53,7 @@ namespace PEPEngine::Utils
     void LockThreadQueue<T>::Push(T value)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_Queue.emplace(value);
+        m_Queue.push(std::move(value));
     }
 
     template <typename T>

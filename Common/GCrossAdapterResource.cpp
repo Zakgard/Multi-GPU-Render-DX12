@@ -20,23 +20,29 @@ GCrossAdapterResource::GCrossAdapterResource(D3D12_RESOURCE_DESC& desc, const st
     UINT64 sizeInBytes;
     UINT64 totalBytes;
     primeDevice->GetDXDevice()->GetCopyableFootprints(&desc, 0, 1, 0, &layout, nullptr, &sizeInBytes, &totalBytes);
-    UINT64 heapSize = Align(layout.Footprint.RowPitch * layout.Footprint.Height);
-    heapSize = std::max(heapSize, totalBytes);
+  //  UINT64 heapSize = Align(layout.Footprint.RowPitch * layout.Footprint.Height);
+  //  heapSize = std::max(heapSize, totalBytes);
+
+    D3D12_RESOURCE_ALLOCATION_INFO allocInfo =
+        primeDevice->GetDXDevice()->GetResourceAllocationInfo(0, 1, &desc);
 
     // Create a heap that will be shared by both adapters.
     CD3DX12_HEAP_DESC heapDesc(
-        heapSize,
+        allocInfo.SizeInBytes,
         D3D12_HEAP_TYPE_DEFAULT,
         0,
         D3D12_HEAP_FLAG_SHARED | D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER);
 
     ThrowIfFailed(primeDevice->GetDXDevice()->CreateHeap(&heapDesc, IID_PPV_ARGS(&crossAdapterResourceHeap[0])));
 
+    SECURITY_ATTRIBUTES securityAttrs = {};
+    securityAttrs.nLength = sizeof(SECURITY_ATTRIBUTES);
+    securityAttrs.bInheritHandle = FALSE;  // Запрещаем наследование handle
 
     HANDLE heapHandle = nullptr;
     ThrowIfFailed(primeDevice->GetDXDevice()->CreateSharedHandle(
         crossAdapterResourceHeap[0].Get(),
-        nullptr,
+        &securityAttrs,
         GENERIC_ALL,
         nullptr,
         &heapHandle));
@@ -57,15 +63,15 @@ GCrossAdapterResource::GCrossAdapterResource(D3D12_RESOURCE_DESC& desc, const st
     isInit = true;
 }
 
-const GResource& GCrossAdapterResource::GetPrimeResource() const
-{
-    return *primeResource;
-}
+//inline const GResource& GCrossAdapterResource::GetPrimeResource() const noexcept
+//{
+//    
+//}
 
-const GResource& GCrossAdapterResource::GetSharedResource() const
-{
-    return *sharedResource;
-}
+//inline const GResource& GCrossAdapterResource::GetSharedResource() const noexcept
+//{
+ //   return *sharedResource;
+//}
 
 void GCrossAdapterResource::Reset()
 {

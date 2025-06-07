@@ -41,7 +41,24 @@ bool SampleApp::Initialize()
         frameResources.emplace_back(
             std::make_unique<FrameResource>(primeDevice, 1, 1, 1));
 
-       
+        auto backBufferDesc = MainWindow->GetBackBuffer(i).GetD3D12ResourceDesc();
+
+        crossAdapterBackBuffers.push_back(std::make_unique<GCrossAdapterResource>(
+            backBufferDesc, primeDevice, secondDevice, L"Shared back buffer",
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+        if (primeDevice->IsCrossAdapterTextureSupported())
+        {
+            crossAdapterBackBuffers[i]->GetPrimeResource().CreateRenderTargetView(&rtvDesc, &primeRTV, i);
+            primeDeviceBackBuffers.push_back(crossAdapterBackBuffers[i]->GetPrimeResource());
+        }
+        else
+        {
+            auto primeBB = GTexture(primeDevice, MainWindow->GetBackBuffer(i).GetD3D12ResourceDesc(),
+                                    L"Prime device Back Buffer" + std::to_wstring(i), TextureUsage::RenderTarget);
+            primeBB.CreateRenderTargetView(&rtvDesc, &primeRTV, i);
+            primeDeviceBackBuffers.push_back(std::move(primeBB));
+        }
     }
 
     primeDevice->SharedFence(primeFence, secondDevice, sharedFence, sharedFenceValue);

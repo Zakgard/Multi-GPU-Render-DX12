@@ -25,7 +25,21 @@ class HybridShadowApp :
 public:
     HybridShadowApp(HINSTANCE hInstance);
 
-    ~HybridShadowApp() override;;
+    ~HybridShadowApp() override
+    {
+        HybridShadowApp::Flush();
+
+        for (auto&& device : devices)
+        {
+            device->ResetAllocators(frameCount);
+            device->TerminatedQueuesWorker();
+            device.reset();
+        }
+
+        devices.clear();
+
+        logThreadIsAlive = false;
+    };
 
     bool Initialize() override;
 

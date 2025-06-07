@@ -1,3 +1,5 @@
 [submodule "Submodule/imgui"]
 	path = Submodule/imgui
-	url = git@github.com:ocornut/imgui.git
+	url = https://github.com/ocornut/imgui.git
+[submodule "Submodule/PEPEngine.Core"]
+	url = https://github.com/Pepengineers/PEPEngine.Core.git

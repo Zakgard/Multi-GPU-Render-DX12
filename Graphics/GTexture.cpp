@@ -115,7 +115,6 @@ namespace PEPEngine::Graphics
                                                                        2 * requiredHeapSize);
 
         auto& PSO = GetPSO();
-        cmdList->SetRootSignature(PSO.GetRootSignature());
         cmdList->SetPipelineState(PSO);
 
         cmdList->SetDescriptorsHeap(&mipMapsMemory);

@@ -75,9 +75,9 @@ namespace PEPEngine::Graphics
 
 
         void ReleaseSlateDescriptors(uint64_t frameCount) const;
-        void ResetAllocators(uint64_t frameCount) const;
+        void ResetAllocators(uint64_t frameCount);
 
-        GDescriptor AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t descriptorCount = 1) const;
+        GDescriptor AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t descriptorCount = 1);
 
         UINT GetNodeMask() const;
 
@@ -94,9 +94,9 @@ namespace PEPEngine::Graphics
 
         UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
-        void Flush() const;
+        void Flush();
 
-        void TerminatedQueuesWorker() const;
+        void TerminatedQueuesWorker();
 
         ComPtr<ID3D12Device> GetDXDevice() const;
 

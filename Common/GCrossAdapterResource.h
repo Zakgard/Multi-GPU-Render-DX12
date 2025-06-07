@@ -28,9 +28,16 @@ public:
                           const std::shared_ptr<GDevice>& sharedDevice, const std::wstring& name = L"",
                           D3D12_RESOURCE_FLAGS primeTextureExtraFlags = D3D12_RESOURCE_FLAG_NONE);
 
-    const GResource& GetPrimeResource() const;
+    inline const GResource& GetPrimeResource() const noexcept
+    {
+        return *primeResource.get();
+    }
 
-    const GResource& GetSharedResource() const;
+    inline const GResource& GetSharedResource() const noexcept
+    {
+        return *sharedResource.get();
+    }
+
     void Reset();
 
     void Resize(UINT newWidth, UINT newHeight);

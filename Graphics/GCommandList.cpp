@@ -494,9 +494,25 @@ namespace PEPEngine::Graphics
         TrackResource(srcRes.Get());
     }
 
-    void GCommandList::CopyResource(const GResource& dstRes, const GResource& srcRes)
+   // void GCommandList::CopyResource(const std::shared_ptr<GResource>& dstRes, const std::shared_ptr<GResource>& srcRes)
+  //  { 
+  //     CopyResource(dstRes->GetD3D12Resource(), srcRes->GetD3D12Resource());
+  //  }
+
+    void GCommandList::CopyResource(const GResource & dstRes, const GResource & srcRes)
     {
         CopyResource(dstRes.GetD3D12Resource(), srcRes.GetD3D12Resource());
+    }
+
+    void GCommandList::CopyResourceAsync(
+        const GResource & dstRes,
+        const GResource & srcRes,
+        const std::shared_ptr<GCommandQueue>& copyQueue)
+    {
+     //   const auto copyCmdList = copyQueue->GetCommandList();
+
+     //   copyCmdList->CopyResource(dstRes.GetD3D12Resource(), srcRes.GetD3D12Resource());
+     //   copyQueue->ExecuteCommandList(copyCmdList);
     }
 
     void GCommandList::ResolveSubresource(const GResource& dstRes, const GResource& srcRes,

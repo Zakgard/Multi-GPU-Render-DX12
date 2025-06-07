@@ -9,7 +9,6 @@
 #include "GTexture.h"
 #include "Material.h"
 #include "NativeModel.h"
-
 #include "assimp/scene.h"
 #include "assimp/Importer.hpp"
 #include "assimp/mesh.h"
@@ -24,11 +23,15 @@ using namespace Utils;
 
 static Assimp::Importer importer;
 
-static std::unordered_map<std::shared_ptr<NativeMesh>, std::shared_ptr<aiMaterial>> loadedAiMaterialForMesh;
-static std::unordered_map<std::shared_ptr<NativeMesh>, std::vector<UINT>> loadedTexturesForMesh;
+custom_unordered_map<std::wstring, std::shared_ptr<NativeModel>> AssetsLoader::loadedModels =
+    MemoryAllocator::CreateUnorderedMap<std::wstring, std::shared_ptr<NativeModel>>();
+custom_unordered_map<std::shared_ptr<NativeMesh>, std::shared_ptr<aiMaterial>> AssetsLoader::loadedAiMaterialForMesh =
+    MemoryAllocator::CreateUnorderedMap<std::shared_ptr<NativeMesh>, std::shared_ptr<aiMaterial>>();
+custom_unordered_map<std::shared_ptr<NativeMesh>, std::vector<UINT>> AssetsLoader::loadedTexturesForMesh =
+    MemoryAllocator::CreateUnorderedMap<std::shared_ptr<NativeMesh>, std::vector<UINT>>();
 
-static inline std::shared_ptr<GModel> CreateModelFromGenerated(std::shared_ptr<GCommandList> cmdList,
-                                                               GeometryGenerator::MeshData generatedData, std::wstring name)
+inline std::shared_ptr<GModel> CreateModelFromGenerated(std::shared_ptr<GCommandList> cmdList,
+                                                        GeometryGenerator::MeshData generatedData, std::wstring name)
 {
     auto nativeMesh = std::make_shared<NativeMesh>(generatedData.Vertices.data(), generatedData.Vertices.size(),
                                                    generatedData.Indices32.data(), generatedData.Indices32.size(),
@@ -40,29 +43,27 @@ static inline std::shared_ptr<GModel> CreateModelFromGenerated(std::shared_ptr<G
     return std::make_shared<GModel>(nativeModel, cmdList);
 }
 
-std::shared_ptr<GModel>& AssetsLoader::GenerateSphere(const std::shared_ptr<GCommandList>& cmdList, const float radius,
-                                                      const UINT sliceCount,
-                                                      const UINT stackCount)
+std::shared_ptr<GModel> AssetsLoader::GenerateSphere(const std::shared_ptr<GCommandList>& cmdList, const float radius,
+                                                     const UINT sliceCount,
+                                                     const UINT stackCount)
 {
     const GeometryGenerator::MeshData sphere = geoGen.CreateSphere(radius, sliceCount, stackCount);
 
-    std::shared_ptr<GModel> model = CreateModelFromGenerated(cmdList, sphere, L"sphere");
-    modelMap.emplace(L"sphere", model);
-    return modelMap[L"sphere"];
+    return CreateModelFromGenerated(cmdList, sphere, L"sphere");
 }
 
-std::shared_ptr<GModel>& AssetsLoader::GenerateQuad(const std::shared_ptr<GCommandList>& cmdList, const float x, const float y, const float w,
-                                                    const float h, const float depth)
+std::shared_ptr<GModel> AssetsLoader::GenerateQuad(const std::shared_ptr<GCommandList>& cmdList, const float x, const float y, const float w,
+                                                   const float h, const float depth)
 {
     const GeometryGenerator::MeshData genMesh = geoGen.CreateQuad(x, y, w, h, depth);
 
-    auto model = CreateModelFromGenerated(cmdList, genMesh, L"quad");
-    modelMap.emplace(L"quad", model);
-    return modelMap[L"quad"];
+    return CreateModelFromGenerated(cmdList, genMesh, L"quad");
 }
 
-static void GetData(const aiMesh* mesh, std::vector<Vertex>& OutVertices, std::vector<DWORD>& OutIndices)
+std::vector<Vertex> GetVertices(aiMesh* mesh)
 {
+    std::vector<Vertex> vertices;
+
     //Get vertices
     for (UINT i = 0; i < mesh->mNumVertices; i++)
     {
@@ -89,8 +90,14 @@ static void GetData(const aiMesh* mesh, std::vector<Vertex>& OutVertices, std::v
             vertex.TangentU.z = mesh->mTangents[i].z;
         }
 
-        OutVertices.emplace_back(vertex);
+        vertices.push_back(vertex);
     }
+    return vertices;
+}
+
+std::vector<DWORD> GetIndices(aiMesh* mesh)
+{
+    std::vector<DWORD> data;
 
     for (UINT i = 0; i < mesh->mNumFaces; i++)
     {
@@ -98,30 +105,32 @@ static void GetData(const aiMesh* mesh, std::vector<Vertex>& OutVertices, std::v
 
         for (UINT j = 0; j < face.mNumIndices; j++)
         {
-            OutIndices.emplace_back(face.mIndices[j]);
+            data.push_back(face.mIndices[j]);
         }
     }
+    return data;
 }
 
-static std::shared_ptr<NativeMesh> CreateSubMesh(const aiMesh* mesh, const std::wstring& modelName)
+std::shared_ptr<NativeMesh> AssetsLoader::CreateSubMesh(aiMesh* mesh, const std::wstring& modelName) const
 {
     // Data to fill
-    std::vector<Vertex> vertices;
-    std::vector<DWORD> indices;
-    GetData(mesh, vertices, indices);
+    auto vertices = GetVertices(mesh);
+    auto indices = GetIndices(mesh);
 
     RecalculateTangent(indices.data(), indices.size(), vertices.data());
 
-    auto nativeMesh = std::make_shared<NativeMesh>(vertices.data(),
-                                                   vertices.size(), indices.data(), indices.size(),
-                                                   D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, modelName + L" " + AnsiToWString(mesh->mName.C_Str()));
+    auto nativeMesh = std::make_shared<NativeMesh>(vertices.data(), vertices.size(), indices.data(), indices.size(),
+                                                   D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+                                                   modelName + L" " + AnsiToWString(mesh->mName.C_Str()));
+    vertices.clear();
+    indices.clear();
 
     return nativeMesh;
 }
 
-static std::shared_ptr<GTexture> LoadTextureByAiMaterial(const aiMaterial* material, const aiTextureType type,
-                                                         const std::wstring& directory,
-                                                         const std::shared_ptr<GCommandList>& cmdList, AssetsLoader* loader)
+std::shared_ptr<GTexture> AssetsLoader::LoadTextureByAiMaterial(const aiMaterial* material, const aiTextureType type,
+                                                                const std::wstring& directory,
+                                                                const std::shared_ptr<GCommandList>& cmdList)
 {
     aiString str;
     material->GetTexture(type, 0, &str);
@@ -139,10 +148,8 @@ static std::shared_ptr<GTexture> LoadTextureByAiMaterial(const aiMaterial* mater
     std::wstring textureName = modelTexturePath;
     std::wstring texturePath = directory + L"\\" + textureName;
 
-    if (std::shared_ptr<GTexture>* texture; loader->TryGetTexture(textureName, texture))
-    {
-        return *texture;
-    }
+    const auto it = texturesMap.find(textureName);
+    if (it != texturesMap.end()) return textures[it->second];
 
     OutputDebugStringW((texturePath + L"\n").c_str());
 
@@ -151,7 +158,11 @@ static std::shared_ptr<GTexture> LoadTextureByAiMaterial(const aiMaterial* mater
                                                      ? TextureUsage::Albedo
                                                      : TextureUsage::Normalmap);
     texture->SetName(textureName);
-    loader->AddTexture(texture);
+
+    textures.push_back(texture);
+
+    texturesMap[textureName] = textures.size() - 1;
+
     return texture;
 }
 
@@ -207,7 +218,7 @@ void AssetsLoader::LoadTextureForModel(const std::shared_ptr<GModel>& model, con
 
             if (textureCount > 0)
             {
-                texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_DIFFUSE, modelDirectory, cmdList, this);
+                texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_DIFFUSE, modelDirectory, cmdList);
             }
             else
             {
@@ -223,7 +234,7 @@ void AssetsLoader::LoadTextureForModel(const std::shared_ptr<GModel>& model, con
 
             if (textureCount > 0)
             {
-                texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_HEIGHT, modelDirectory, cmdList, this);
+                texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_HEIGHT, modelDirectory, cmdList);
             }
             else
             {
@@ -231,7 +242,7 @@ void AssetsLoader::LoadTextureForModel(const std::shared_ptr<GModel>& model, con
 
                 if (textureCount > 0)
                 {
-                    texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_NORMALS, modelDirectory, cmdList, this);
+                    texture = LoadTextureByAiMaterial(aiMaterial.get(), aiTextureType_NORMALS, modelDirectory, cmdList);
                 }
                 else
                 {
@@ -253,7 +264,7 @@ void AssetsLoader::LoadTextureForModel(const std::shared_ptr<GModel>& model, con
     }
 }
 
-static void RecursivlyLoadMeshes(const std::shared_ptr<NativeModel>& model, const aiNode* node, const aiScene* scene)
+void AssetsLoader::RecursivlyLoadMeshes(const std::shared_ptr<NativeModel>& model, aiNode* node, const aiScene* scene) const
 {
     for (UINT i = 0; i < node->mNumMeshes; i++)
     {
@@ -269,13 +280,13 @@ static void RecursivlyLoadMeshes(const std::shared_ptr<NativeModel>& model, cons
     }
 }
 
-std::shared_ptr<GModel>& AssetsLoader::CreateModelFromFile(const std::shared_ptr<GCommandList>& cmdList,
-                                                           const std::string& filePath)
+std::shared_ptr<GModel> AssetsLoader::CreateModelFromFile(std::shared_ptr<GCommandList> cmdList,
+                                                          const std::string& filePath)
 {
-    auto it = modelMap.find(AnsiToWString(filePath));
-    if (it != modelMap.end())
+    auto it = loadedModels.find(AnsiToWString(filePath));
+    if (it != loadedModels.end())
     {
-        return it->second;
+        return std::make_shared<GModel>(it->second, cmdList);
     }
 
 
@@ -289,10 +300,11 @@ std::shared_ptr<GModel>& AssetsLoader::CreateModelFromFile(const std::shared_ptr
 
     RecursivlyLoadMeshes(modelFromFile, sceneModel->mRootNode, sceneModel);
 
+    loadedModels[modelFromFile->GetName()] = modelFromFile;
 
     auto renderModel = std::make_shared<GModel>(modelFromFile, cmdList);
     LoadTextureForModel(renderModel, cmdList);
-    modelMap[AnsiToWString(filePath)] = renderModel;
+
     return renderModel;
 }
 
@@ -322,12 +334,12 @@ UINT AssetsLoader::GetMaterialIndex(const std::wstring& name)
     return it->second;
 }
 
-std::shared_ptr<GTexture>& AssetsLoader::GetTexture(const UINT index)
+std::shared_ptr<GTexture> AssetsLoader::GetTexture(const UINT index)
 {
     return textures[index];
 }
 
-std::shared_ptr<Material>& AssetsLoader::GetMaterial(const UINT index)
+std::shared_ptr<Material> AssetsLoader::GetMaterial(const UINT index)
 {
     return materials[index];
 }
@@ -349,25 +361,14 @@ void AssetsLoader::AddTexture(const std::shared_ptr<GTexture>& texture)
     textures.push_back((texture));
 }
 
-const std::vector<std::shared_ptr<Material>>& AssetsLoader::GetMaterials()
+custom_vector<std::shared_ptr<Material>>& AssetsLoader::GetMaterials()
 {
     return materials;
 }
 
-const std::vector<std::shared_ptr<GTexture>>& AssetsLoader::GetTextures()
+custom_vector<std::shared_ptr<GTexture>>& AssetsLoader::GetTextures()
 {
     return textures;
-}
-
-bool AssetsLoader::TryGetTexture(const std::wstring& name, std::shared_ptr<GTexture>*& OutTexture)
-{
-    const auto it = texturesMap.find(name);
-    if (it == texturesMap.end())
-    {
-        return false;
-    }
-    OutTexture = &textures[it->second];
-    return true;
 }
 
 void AssetsLoader::ClearTrackedObjects()
