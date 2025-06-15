@@ -79,3 +79,6 @@ constexpr char* NAVIGATION_ICONS_PLACEMENTS[NAVIGATION_ICONS_COUNT] = {
 	"Pictures\\Icons\\Chest.png",
 	"Pictures\\Icons\\guild.png",
 };
+
+constexpr char* UI_NAVIGATION_ATLAS = "Pictures\\Icons\\UI_Navigation_Upscale.png";
+constexpr char* UI_MAP = "Pictures\\Icons\\map.png";

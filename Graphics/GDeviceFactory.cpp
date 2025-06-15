@@ -15,7 +15,7 @@ namespace PEPEngine::Graphics
 
     ComPtr<IDXGIFactory4> GDeviceFactory::CreateFactory()
     {
-#if defined(DEBUG) || defined(_DEBUG)
+//#if defined(DEBUG) || defined(_DEBUG)
         {
             ComPtr<ID3D12Debug> debugController;
             ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
@@ -25,14 +25,14 @@ namespace PEPEngine::Graphics
             ThrowIfFailed(debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
             //spDebugController1->SetEnableGPUBasedValidation(true);
         }
-#endif
+//#endif
 
         ComPtr<IDXGIFactory4> factory;
 
         UINT createFactoryFlags = 0;
-#if defined(DEBUG) || defined(_DEBUG)
+//#if defined(DEBUG) || defined(_DEBUG)
         createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
+//#endif
 
         ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&factory)));
 

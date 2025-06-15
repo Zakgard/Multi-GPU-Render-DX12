@@ -16,6 +16,8 @@ cbuffer HPBarCB : register(b0)
     float FillThreshold; // Порог "переполнения" (например, 0.9)
     float CrackRoughness; // Шероховатость трещин (0.1–0.5)
     float CrackThickness; // Толщина трещин (0.003–0.01)
+    float MinStarsCount;
+    float MaxStarsCount;
 };
 
 RWTexture2D<float4> OutputTexture : register(u0);
@@ -85,7 +87,7 @@ float GenerateCrack(float2 uv, float seed, float thickness, float roughness)
 // Генерация звёзд с хвостами
 float4 SpawnStars(float2 pixelPos, float seed)
 {
-    float starCount = 70.0 + floor(Rand(float2(0.0, seed), seed) * 150.0);
+    float starCount = MinStarsCount + floor(Rand(float2(0.0, seed), seed) * MaxStarsCount);
     float3 totalColor = float3(0, 0, 0);
     float totalAlpha = 0.0;
     float aspectRatio = TextureSize.x / TextureSize.y;

@@ -245,8 +245,10 @@ void HybridUIApp::Draw(const GameTimer& gt)
 
     const UINT timestampHeapIndex = 2 * currentFrameResourceIndex;
 
-    if (IsUseSharedUI)
+    if (IsUseSharedUI && CurrentFrame == 0)
     {
+        CurrentFrame = 1;
+
         auto secondRenderQueue = secondDevice->GetCommandQueue();
 
         if (currentFrameResource->SecondRenderFenceValue == 0 || secondRenderQueue->IsFinish(
@@ -263,21 +265,11 @@ void HybridUIApp::Draw(const GameTimer& gt)
             cmdList->ClearRenderTarget(&secondDeviceUIBackBufferRTV, 0, Colors::Black);
 
             cmdList->SetRenderTargets(1, &secondDeviceUIBackBufferRTV, 0);
-            
-            if (CurrentFrame == 0)
-            {
-                const auto computeQueue = secondDevice->GetCommandQueue(GQueueType::Compute);
-                UIPath->RenderEffects(computeQueue);
 
-                UIPath->Render(cmdList);
+            const auto &computeQueue = secondDevice->GetCommandQueue(GQueueType::Compute);
+            UIPath->RenderEffects(computeQueue);
 
-                CurrentFrame = 1;
-            }
-            else
-            {
-                CurrentFrame = 0;
-            }
-
+            UIPath->Render(cmdList);
 
             cmdList->CopyResource(crossAdapterUITexture->GetSharedResource(), secondDeviceUITexture);
 
@@ -296,6 +288,10 @@ void HybridUIApp::Draw(const GameTimer& gt)
 
             currentFrameResource->PrimeCopyFenceValue = copyPrimeQueue->ExecuteCommandList(cmdList);
         }
+    }
+    else
+    {
+        CurrentFrame = 0;
     }
 
 
@@ -1355,7 +1351,6 @@ void HybridUIApp::UpdateSsaoCB(const GameTimer& gt) const
 bool HybridUIApp::InitMainWindow()
 {
     MainWindow = CreateRenderWindow(primeDevice, mainWindowCaption, 1920, 1080, false);
-
     logQueue.Push(std::wstring(L"\nInit Window"));
     return true;
 }
@@ -1467,6 +1462,16 @@ LRESULT HybridUIApp::MsgProc(const HWND hwnd, const UINT msg, const WPARAM wPara
         {
             Flush();
             IsStop = true;
+        }
+
+        if (keycode == VK_UP && keyboard.KeyIsPressed(VK_UP))
+        {
+            UIPath->UpHpBarQuality();
+        }
+
+        if (keycode == VK_DOWN && keyboard.KeyIsPressed(VK_DOWN))
+        {
+            UIPath->DownHpBarQuality();
         }
 
         return 0;

@@ -32,6 +32,8 @@
 
 uint16_t skillCounter = 0;
 static int mod = 1;
+int UI_NAVIGATION_ATLAS_SIZE = 4096;
+int UI_MAP_SIZE = 800;
 static bool isShared = false;
 static float currentTime = 0.0f;
 static float borderSize = 1.0f;
@@ -52,6 +54,14 @@ static int fpsToInitBlur = 10;
 static float gradAnimSpeed = 100.6f;
 static auto currentDeltaTime = std::chrono::high_resolution_clock::now();
 static auto lastDeltaTime = currentDeltaTime;
+
+ImVec2 pointPos;
+bool isMapPointInited = false;
+int currentDetailsLevel = 0;
+float MinStarCount = 10;
+float MaxStarCount = 15;
+float hpBarDispathSize = 512;
+float hbBarUpgradeMullty = 1.2f;
 std::vector<float> glows = std::vector<float>(20);
 
 // Forward declare message handler from imgui_impl_win32.cpp
@@ -123,7 +133,7 @@ void UILayer::SetStyle()
     }
 
     ImGuiIO& io = ImGui::GetIO();
-  //  io.DisplaySize = ImVec2(7680, 4320); // 8K разрешение
+    //  io.DisplaySize = ImVec2(7680, 4320); // 8K разрешение
     io.DisplayFramebufferScale = ImVec2(16.0f, 16.0f); // Суперсэмплинг
 }
 
@@ -143,7 +153,23 @@ void UILayer::Invalidate()
 
 void UILayer::SetFPS(float FPS)
 {
-    
+
+}
+
+void UILayer::UpHpBarQuality()
+{
+    MaxStarCount *= hbBarUpgradeMullty;
+    MinStarCount *= hbBarUpgradeMullty;
+    currentDetailsLevel++;
+    // hpBarDispathSize *= hbBarUpgradeMullty;
+}
+
+void UILayer::DownHpBarQuality()
+{
+    MaxStarCount /= hbBarUpgradeMullty;
+    MinStarCount /= hbBarUpgradeMullty;
+    currentDetailsLevel--;
+    //  hpBarDispathSize /= hbBarUpgradeMullty;
 }
 
 void UILayer::InitializeBlurResources()
@@ -214,15 +240,46 @@ void UILayer::DrawLeftBar()
     ImGui::End();
 }
 
+void UILayer::DrawMapPoint(const ImVec2& size)
+{
+    if (size.x <= 0 || size.y <= 0) return;
+
+    if (!isMapPointInited)
+    {
+        // Инициализация генератора случайных чисел
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+
+        // Распределение координат в пределах размера миникарты
+        std::uniform_real_distribution<float> distX(100.0f, 350.0f);
+        std::uniform_real_distribution<float> distY(100.0f, 350.0f);
+
+        // Генерация случайной позиции (относительно окна)
+        const float x = distX(gen);
+        const float y = distY(gen);
+
+        // Получаем позицию окна для перевода в абсолютные координаты
+        const ImVec2 windowPos = ImGui::GetWindowPos();
+        pointPos = ImVec2(windowPos.x + x, windowPos.y + y);
+
+        isMapPointInited = true;
+    }
+
+
+    // Рисуем закрашенный кружок (точку)
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddCircleFilled(pointPos, 5.0f, IM_COL32(0, 0, 0, 255));
+}
+
 void UILayer::DrawLeftBottomPanel()
 {
-    ImGui::SetNextWindowPos(ImVec2(paddingX, displaySize.y - paddingY - buttonSize + bottomPosOffset));
-    ImGui::SetNextWindowSize(ImVec2(buttonSize * 10 + 100, buttonSize + 20));
+    ImGui::SetNextWindowPos(ImVec2(paddingX, displaySize.y - paddingY - uiNavSize + bottomPosOffset));
+    ImGui::SetNextWindowSize(ImVec2(uiNavSize * 9 + 20, uiNavSize + 20));
     ImGui::Begin("HotbarLeft", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < 8; ++i) {
         ImGui::PushID(static_cast<int>(i));
-        ImGui::ImageButton((void*)(intptr_t)uiNavigationPicturesDescriptors[0].GetGPUHandle().ptr, ImVec2(buttonSize, buttonSize), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на иконки
-        ApplyGradientAndStarsEffect(ImVec2(iconSize, iconSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
+        ImGui::ImageButton((void*)(intptr_t)uiNavigation.GetGPUHandle().ptr, ImVec2(uiNavSize, uiNavSize), ImVec2(0.25f * (i % 4), 0.25f * (i / 4)), ImVec2(0.25f + 0.25f * (i % 4), 0.25f + 0.25f * (i / 4)), 0); // Замени на иконки
+        ApplyGradientAndStarsEffect(ImVec2(uiNavSize, uiNavSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
         currentColorIndex++;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Слот %zu", i + 1);
         if (i < 9) ImGui::SameLine();
@@ -233,13 +290,13 @@ void UILayer::DrawLeftBottomPanel()
 
 void UILayer::DrawRightBar()
 {
-    ImGui::SetNextWindowPos(ImVec2(displaySize.x - paddingX - iconSize * 10 - 100, displaySize.y - paddingY - iconSize + bottomPosOffset));
-    ImGui::SetNextWindowSize(ImVec2(iconSize * 10 + 100, iconSize + 20));
+    ImGui::SetNextWindowPos(ImVec2(displaySize.x - paddingX - iconSize * 11 - 130, displaySize.y - paddingY - uiNavSize + bottomPosOffset));
+    ImGui::SetNextWindowSize(ImVec2(uiNavSize * 9 + 20, uiNavSize + 20));
     ImGui::Begin("HotbarRight", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < 8; ++i) {
         ImGui::PushID(static_cast<int>(i + 22));
-        ImGui::ImageButton((void*)(intptr_t)uiNavigationPicturesDescriptors[0].GetGPUHandle().ptr, ImVec2(iconSize, iconSize), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на иконки
-        ApplyGradientAndStarsEffect(ImVec2(iconSize, iconSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
+        ImGui::ImageButton((void*)(intptr_t)uiNavigation.GetGPUHandle().ptr, ImVec2(uiNavSize, uiNavSize), ImVec2(0.25f * (i % 4), 0.5f + 0.25f * (i / 4)), ImVec2(0.25f + 0.25f * (i % 4), 0.75f + 0.25f * (i / 4)), 0); // Замени на иконки
+        ApplyGradientAndStarsEffect(ImVec2(uiNavSize, uiNavSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
         currentColorIndex++;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Слот %zu", i + 1);
         if (i < 9) ImGui::SameLine();
@@ -250,29 +307,30 @@ void UILayer::DrawRightBar()
 
 void UILayer::DrawRightTopBar()
 {
-    ImGui::SetNextWindowPos(ImVec2(displaySize.x - paddingX - 200.0f, paddingY));
-    ImGui::SetNextWindowSize(ImVec2(400, 450));
+    ImGui::SetNextWindowPos(ImVec2(displaySize.x - paddingX - 442.0f, paddingY));
+    ImGui::SetNextWindowSize(ImVec2(430.0f, 430.0f));
     ImGui::Begin("RightTopPanel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
     // 5.1 Миникарта
-    ImGui::ImageButton((void*)(intptr_t)skillPicturesDescriptors[36].GetGPUHandle().ptr, ImVec2(180.0f, 60.0f), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на текстуру миникарты
-    ApplyGradientAndStarsEffect(ImVec2(iconSize, iconSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
+    ImGui::ImageButton((void*)(intptr_t)uiMapDesc.GetGPUHandle().ptr, ImVec2(410.0f, 410.0f), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на текстуру миникарты
+    DrawMapPoint(ImVec2(410.0f, 410.0f));
     currentColorIndex++;
     // 5.2 Текущее время
-    ImGui::Text("Время: %s", L"22:34");
+  //  ImGui::Text("Время: %s", L"22:34");
     ImGui::End();
 }
 
 void UILayer::DrawRightMiddlePanel()
 {
-    ImGui::SetNextWindowPos(ImVec2(displaySize.x - iconSize - 100, displaySize.y - iconSize * 15));
-    ImGui::SetNextWindowSize(ImVec2((iconSize + 10) * 2, iconSize * 10 + 100));
+    ImGui::SetNextWindowPos(ImVec2(displaySize.x - iconSize - 90, displaySize.y - iconSize * 15 + 25));
+    ImGui::SetNextWindowSize(ImVec2((iconSize + 14) * 2, iconSize * 10 + 52));
 
     ImGui::Begin("HotbarRightMiddle", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
     for (size_t i = 0; i < 20; ++i) {
         ImGui::PushID(static_cast<int>(i + 22));
-        ImGui::ImageButton((void*)(intptr_t)uiNavigationPicturesDescriptors[0].GetGPUHandle().ptr, ImVec2(iconSize, iconSize), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на иконки
+        ImGui::ImageButton((void*)(intptr_t)skillPicturesDescriptors[skillCounter].GetGPUHandle().ptr, ImVec2(iconSize, iconSize), ImVec2(0, 0), ImVec2(1, 1), 0); // Замени на иконки
         ApplyGradientAndStarsEffect(ImVec2(iconSize, iconSize), baseColors[currentColorIndex], endColors[currentColorIndex]);
         currentColorIndex++;
+        skillCounter++;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Slot %zu", i + 1);
         if (i % 2 == 0) ImGui::SameLine();
         ImGui::PopID();
@@ -283,12 +341,10 @@ void UILayer::DrawRightMiddlePanel()
 
 void UILayer::DrawBottomPanel()
 {
-
-
     float centerX = (displaySize.x - 17 * iconSize) / 2.0f;
 
-    ImGui::SetNextWindowPos(ImVec2(centerX, displaySize.y - paddingY - 2 * iconSize - barHeight + bottomPosOffset - 100));
-    ImGui::SetNextWindowSize(ImVec2(17 * iconSize, 2 * iconSize + barHeight + sizeOffset + 100));
+    ImGui::SetNextWindowPos(ImVec2(centerX, displaySize.y - paddingY - 2 * iconSize - barHeight + bottomPosOffset - 50));
+    ImGui::SetNextWindowSize(ImVec2(17 * iconSize, 2 * iconSize + barHeight + sizeOffset + 50));
     ImGui::Begin("CenterPanel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
     // 3.2 Полоска опыта
 
@@ -384,8 +440,8 @@ ComPtr<ID3D12Resource> CreateUploadBuffer(ID3D12Device* device, UINT64 size)
 void UILayer::Update(const std::shared_ptr<GCommandList>& cmdList)
 {
     GradientNoiseCB par;
-    const auto baseCol = baseColors[uiDescriptorCounter];
-    const auto ednCol = endColors[uiDescriptorCounter];
+    const auto& baseCol = baseColors[uiDescriptorCounter];
+    const auto& ednCol = endColors[uiDescriptorCounter];
     par.ColorStart = XMFLOAT4(baseCol.x, baseCol.y, baseCol.z, baseCol.w);
     par.ColorEnd = XMFLOAT4(ednCol.x, ednCol.y, ednCol.z, ednCol.w);
     par.Smoothness = 2.0f;
@@ -423,7 +479,7 @@ void UILayer::InitializeGradientResources()
     uiSRVs[uiDescriptorCounter] = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
     uiUAVs[uiDescriptorCounter] = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
-    D3D12_RESOURCE_DESC gradientText;
+    D3D12_RESOURCE_DESC gradientText = {};
     gradientText.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     gradientText.Alignment = 0;
     gradientText.Width = 128;
@@ -446,7 +502,7 @@ void UILayer::InitializeGradientResources()
 
     uiTexs[uiDescriptorCounter].CreateUnorderedAccessView(&uavDesc, &uiUAVs[uiDescriptorCounter]);
 
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -488,11 +544,11 @@ void UILayer::InitializeHPBar()
     hbBarSRV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
     hbBarUAV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
-    D3D12_RESOURCE_DESC gradientText;
+    D3D12_RESOURCE_DESC gradientText = {};
     gradientText.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     gradientText.Alignment = 0;
-    gradientText.Width = 2048;
-    gradientText.Height = 2048;
+    gradientText.Width = hpBarDispathSize;
+    gradientText.Height = hpBarDispathSize;
     gradientText.DepthOrArraySize = 1;
     gradientText.MipLevels = 1;
     gradientText.Format = rtvFormat;
@@ -503,7 +559,7 @@ void UILayer::InitializeHPBar()
 
     hbBarTex = GTexture(device, gradientText, L"HP bar");
 
-    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
     uavDesc.Format = rtvFormat;
     uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
     uavDesc.Texture2D.PlaneSlice = 0;
@@ -511,7 +567,7 @@ void UILayer::InitializeHPBar()
 
     hbBarTex.CreateUnorderedAccessView(&uavDesc, &hbBarUAV);
 
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -548,9 +604,9 @@ void UILayer::InitializeHPBar()
 
 void UILayer::UpdateHBBar(const std::shared_ptr<GCommandList>& cmdList, float value = 0.2f)
 {
-    HPBarCB par;
-    const auto baseCol = baseColors[uiDescriptorCounter];
-    const auto ednCol = endColors[uiDescriptorCounter];
+    HPBarCB par = {};
+    const auto& baseCol = baseColors[uiDescriptorCounter];
+    const auto& ednCol = endColors[uiDescriptorCounter];
     par.ColorStart = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f); // Зелёный
 
     const auto endR = 1.0f - 1.0f * value * 11;
@@ -558,11 +614,13 @@ void UILayer::UpdateHBBar(const std::shared_ptr<GCommandList>& cmdList, float va
 
     par.ColorEnd = XMFLOAT4(endR, endG, 0.0f, 1.0f);   // Красный
 
-    par.Health = value * 11;
-    par.TextureSize = XMFLOAT2(2048, 2048);
+    par.Health = value * 11 * (1024 / hpBarDispathSize);
+    par.TextureSize = XMFLOAT2(hpBarDispathSize, hpBarDispathSize);
     par.Time = totalTime;
     par.SparkleIntensity = 0.0009f;
     par.SparkleSpeed = 0.0008f;
+    par.MinStarCount = MinStarCount;
+    par.MaxStarCount = MaxStarCount;
     // Область спавна - по всему HP бару
     par.StarPosMin = XMFLOAT2(0.0f, 0.0f);
     par.StarPosMax = XMFLOAT2(value * 10, 1.0f);
@@ -583,8 +641,8 @@ void UILayer::UpdateHBBar(const std::shared_ptr<GCommandList>& cmdList, float va
     cmdList->SetRoot32BitConstants(0, sizeof(HPBarCB) / sizeof(float), &par, 0);
     cmdList->SetRootDescriptorTable(1, &hbBarUAV);
 
-    uint32_t dispatchX = (2048 + 7) / 8;  // Округляем вверх (1012 групп)
-    uint32_t dispatchY = (2048 + 7) / 8;   // Округляем вверх (13 групп)
+    uint16_t dispatchX = (hpBarDispathSize + 7) / 8;  // Округляем вверх (1012 групп)
+    uint16_t dispatchY = (hpBarDispathSize + 7) / 8;   // Округляем вверх (13 групп)
     cmdList->Dispatch(dispatchX, dispatchY, 1);
 
     cmdList->TransitionBarrier(hbBarTex.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
@@ -638,7 +696,7 @@ void UILayer::RenderEffects(const std::shared_ptr<GCommandQueue>& queue) noexcep
     const double deltaTime = std::chrono::duration<double>(currentDeltaTime - lastDeltaTime).count();
     lastDeltaTime = currentDeltaTime;
 
-    const auto cmdList = queue->GetCommandList();
+    const auto& cmdList = queue->GetCommandList();
 
     for (uint16_t i = 0; i < 30; i++)
     {
@@ -656,11 +714,10 @@ void UILayer::RenderEffects(const std::shared_ptr<GCommandQueue>& queue) noexcep
 
     totalTime += deltaTime * mod;
 
-    const auto barVal = totalTime * (740.0f / 8096.0f);
-    UpdateHBBar(cmdList, barVal);
-    
+    UpdateHBBar(cmdList, totalTime * (740.0f / 8096.0f));
+
     queue->ExecuteCommandList(cmdList);
-  //  queue->Close();
+    //  queue->Close();
 }
 
 void UILayer::SetTexture()
@@ -670,16 +727,16 @@ void UILayer::SetTexture()
 
     for (uint16_t i = 0; i < 30; i++)
     {
-     //   uiSRVs[i].~GDescriptor();
-      //  uiUAVs[i].~GDescriptor();
-        //    uiTexs[i].~GTexture();
+        //   uiSRVs[i].~GDescriptor();
+         //  uiUAVs[i].~GDescriptor();
+           //    uiTexs[i].~GTexture();
         uiTexs[i].Reset();
         InitializeGradientResources();
     }
 
-    for (uint16_t i = 0; i < 40; i++)
+    for (uint16_t i = 0; i < 63; i++)
     {
-      //  skillPicturesDescriptors[i].~GDescriptor();
+        //  skillPicturesDescriptors[i].~GDescriptor();
         skillPicturesDescriptors[i] = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
         loader.get()->LoadTextureFromFile(SKILL_PICURES_PLACEMENTS[i], device->GetDXDevice().Get(), skillPicturesDescriptors[i].GetCPUHandle(), &my_textures[i], &pictureSizeX, &pictureSizeY);
@@ -694,9 +751,15 @@ void UILayer::SetTexture()
         loader.get()->LoadTextureFromFile(NAVIGATION_ICONS_PLACEMENTS[i], device->GetDXDevice().Get(), uiNavigationPicturesDescriptors[i].GetCPUHandle(), &my_textures[i], &pictureSizeX, &pictureSizeY);
     }
 
-//    hbBarSRV.~GDescriptor();
- //   hbBarUAV.~GDescriptor();
-//    hbBarTex.~GTexture();
+    uiNavigation = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+    loader.get()->LoadTextureFromFile(UI_NAVIGATION_ATLAS, device->GetDXDevice().Get(), uiNavigation.GetCPUHandle(), &uiNavRes, &UI_NAVIGATION_ATLAS_SIZE, &UI_NAVIGATION_ATLAS_SIZE);
+
+    uiMapDesc = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+    loader.get()->LoadTextureFromFile(UI_MAP, device->GetDXDevice().Get(), uiMapDesc.GetCPUHandle(), &uiMapRes, &UI_MAP_SIZE, &UI_MAP_SIZE);
+
+    //    hbBarSRV.~GDescriptor();
+     //   hbBarUAV.~GDescriptor();
+    //    hbBarTex.~GTexture();
     InitializeHPBar();
 }
 
@@ -715,7 +778,7 @@ void UILayer::ChangeDevice(const std::shared_ptr<GDevice>& device)
     isShared = !isShared;
     SetupRenderBackends();
     CreateDeviceObject();
-   // SetStyle();
+    // SetStyle();
     SetTexture();
 
     //blurDescriptors.push_back(device->AllocateDescriptors(
@@ -812,17 +875,16 @@ void UILayer::Render(const std::shared_ptr<GCommandList>& cmdList)
     for (uint16_t i = 0; i < 1; i++)
     {
         currentColorIndex = 0;
-        DrawLeftBar();
+        // DrawLeftBar();
         DrawLeftBottomPanel();
         DrawRightBar();
         DrawRightTopBar();
-        DrawRightMiddlePanel();
-
         DrawBottomPanel();
+        DrawRightMiddlePanel();
     }
 
-    ImGui::Begin("sec", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-    ImGui::Text(std::to_string(deltatime).c_str());
+    ImGui::Begin("detail level", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+    ImGui::Text(std::to_string(currentDetailsLevel).c_str());
     ImGui::End();
 
     ImGui::ShowDemoWindow();
@@ -831,9 +893,9 @@ void UILayer::Render(const std::shared_ptr<GCommandList>& cmdList)
     // Рендерим ImGui
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList->GetGraphicsCommandList().Get());
 
-   // lastTime = std::chrono::high_resolution_clock::now();
-    //std::chrono::duration<double> duration = lastTime - currentTime;
-  //  timee = duration.count();
-   // totalTime += timee * mod;
-   // deltatime = timee;
+    // lastTime = std::chrono::high_resolution_clock::now();
+     //std::chrono::duration<double> duration = lastTime - currentTime;
+   //  timee = duration.count();
+    // totalTime += timee * mod;
+    // deltatime = timee;
 }

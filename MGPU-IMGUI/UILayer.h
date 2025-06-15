@@ -51,11 +51,19 @@ class UILayer
 
         float CrackRoughness; // Ўероховатость трещин (0.1Ц0.5)
         float CrackThickness; //
+
+        float MinStarCount;
+        float MaxStarCount;
     };
 
     //HP Bar
     GTexture hbBarTex;
+    GTexture uiAtlasTex;
+    ID3D12Resource* uiNavRes;
+    ID3D12Resource* uiMapRes;
     GDescriptor hbBarSRV;
+    GDescriptor uiMapDesc;
+    GDescriptor uiNavigation;
     GDescriptor hbBarUAV;
     GShader hbBarShader;
     ComputePSO hbBarPso;
@@ -126,6 +134,7 @@ class UILayer
 
     void DrawBlurShit();
     void DrawLeftBar();
+    void DrawMapPoint(const ImVec2& size);
     void DrawLeftBottomPanel();
     void DrawRightBar();
     void DrawRightTopBar();
@@ -161,6 +170,7 @@ class UILayer
     GTexture gradientTex;
    
     float buttonSize = 40.0f;
+    float uiNavSize = 60.0f;
     float iconSize = 40.0f;
     int intIconSize = 35;
     float barHeight = 60.0f;
@@ -175,7 +185,8 @@ public:
     void CreateDeviceObject();
     void Invalidate();
     void SetFPS(float FPS);
-
+    void UpHpBarQuality();
+    void DownHpBarQuality();
     void Render(const std::shared_ptr<GCommandList>& cmdList);
 
     void ChangeDevice(const std::shared_ptr<GDevice>& device);
